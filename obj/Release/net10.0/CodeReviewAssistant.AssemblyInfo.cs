@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("CodeReviewAssistant")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+03d00aa4bb543ede68cf5e4570c46fd47ddf21ae")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f97c175c8ff25e004f4aa0676e6d2741e65e51f8")]
 [assembly: System.Reflection.AssemblyProductAttribute("CodeReviewAssistant")]
 [assembly: System.Reflection.AssemblyTitleAttribute("CodeReviewAssistant")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

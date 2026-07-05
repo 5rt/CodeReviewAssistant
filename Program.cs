@@ -5,7 +5,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddSingleton<CodeReviewService>();
 
 builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
-    p.WithOrigins("http://localhost:5173").AllowAnyHeader().AllowAnyMethod()));
+    p.WithOrigins("http://localhost:5173", "https://kind-desert-061e58f00.azurestaticapps.net").AllowAnyHeader().AllowAnyMethod()));
 
 var app = builder.Build();
 
