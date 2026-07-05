@@ -1,41 +1,25 @@
-var builder = WebApplication.CreateBuilder(args);
+using CodeReviewAssistant.Models;
+using CodeReviewAssistant.Services;
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddSingleton<CodeReviewService>();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+app.MapPost("/api/review", async (ReviewRequest req, CodeReviewService service) =>
 {
-    app.MapOpenApi();
-}
+    if (string.IsNullOrWhiteSpace(req.Diff))
+        return Results.BadRequest("No code provided.");
 
-app.UseHttpsRedirection();
-
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
+    try
+    {
+        var issues = await service.ReviewAsync(req.Diff, req.Focus);
+        return Results.Ok(issues);
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem($"Review failed: {ex.Message}");
+    }
+});
 
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}

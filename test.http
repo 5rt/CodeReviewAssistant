@@ -1,0 +1,7 @@
+POST http://localhost:5139/api/review
+Content-Type: application/json
+
+{
+  "diff": "public string GetUser(string name) {\n  var query = \"SELECT * FROM Users WHERE name = '\" + name + \"'\";\n  return db.Run(query);\n}",
+  "focus": "everything"
+}
