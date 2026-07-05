@@ -20,6 +20,9 @@ const EXAMPLE = `public string GetUser(string name) {
   return db.Run(query);
 }`;
 
+const API = import.meta.env.VITE_API_URL ?? "http://localhost:5139";
+
+
 const sevClass = (s: string) =>
   s.toLowerCase() === "high" ? "high" : s.toLowerCase() === "medium" ? "med" : "low";
 
@@ -35,7 +38,7 @@ export default function App() {
     setError("");
     setIssues(null);
     try {
-      const res = await fetch("http://localhost:5139/api/review", {
+      const res = await fetch(`${API}/api/review`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ diff: code, focus }),
