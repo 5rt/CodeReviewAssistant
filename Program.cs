@@ -4,7 +4,12 @@ using CodeReviewAssistant.Services;
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddSingleton<CodeReviewService>();
 
+builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
+    p.WithOrigins("http://localhost:5173").AllowAnyHeader().AllowAnyMethod()));
+
 var app = builder.Build();
+
+app.UseCors();
 
 app.MapPost("/api/review", async (ReviewRequest req, CodeReviewService service) =>
 {
