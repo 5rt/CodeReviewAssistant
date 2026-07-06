@@ -22,7 +22,6 @@ const EXAMPLE = `public string GetUser(string name) {
 
 const API = import.meta.env.VITE_API_URL ?? "http://localhost:5139";
 
-
 const sevClass = (s: string) =>
   s.toLowerCase() === "high" ? "high" : s.toLowerCase() === "medium" ? "med" : "low";
 
@@ -41,7 +40,7 @@ export default function App() {
       const res = await fetch(`${API}/api/review`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ diff: code, focus }),
+        body: JSON.stringify({ diff: code, focus: "everything" }),
       });
       if (!res.ok) throw new Error(`The review service returned ${res.status}. Check the API is running.`);
       setIssues(await res.json());
@@ -52,8 +51,16 @@ export default function App() {
     }
   }
 
+  // Tabs filter the results on screen, instantly
+  const visible =
+    issues === null
+      ? null
+      : focus === "everything"
+      ? issues
+      : issues.filter((i) => i.category.toLowerCase() === focus);
+
   const count = (sev: string) =>
-    issues?.filter((i) => i.severity.toLowerCase() === sev).length ?? 0;
+    visible?.filter((i) => i.severity.toLowerCase() === sev).length ?? 0;
 
   return (
     <div className="wrap">
@@ -74,7 +81,7 @@ export default function App() {
         </h2>
         <p>
           Flags security vulnerabilities, bugs, and style issues with suggested
-          fixes — powered by a structured-output LLM pipeline on Azure.
+          fixes, powered by a structured-output LLM pipeline on Azure.
         </p>
       </section>
 
@@ -122,14 +129,14 @@ export default function App() {
         </div>
       )}
 
-      {issues && issues.length > 0 && (
+      {visible && visible.length > 0 && (
         <>
           <div className="summary">
             <span className="pill high"><b>{count("high")}</b> high</span>
             <span className="pill med"><b>{count("medium")}</b> medium</span>
             <span className="pill low"><b>{count("low")}</b> low</span>
           </div>
-          {issues.map((i, idx) => (
+          {visible.map((i, idx) => (
             <article className={`card ${sevClass(i.severity)}`} key={idx}>
               <div className="card-top">
                 <span className="sev">{i.severity}</span>
@@ -143,6 +150,10 @@ export default function App() {
             </article>
           ))}
         </>
+      )}
+
+      {visible && visible.length === 0 && issues && issues.length > 0 && (
+        <div className="empty">No {FOCUSES.find((f) => f.key === focus)?.label.toLowerCase()} found in this review.</div>
       )}
 
       {issues && issues.length === 0 && (
