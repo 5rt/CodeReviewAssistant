@@ -6,7 +6,18 @@ A web app I built that reviews code using an LLM. You paste in a snippet or a di
 
 Heads up: the backend runs on Azure's free tier, so if nobody has used it for a while the first request takes up to a minute while the server wakes up. After that it responds in a few seconds.
 
-<!-- ![screenshot](docs/screenshot.png) -->
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="https://github.com/user-attachments/assets/df50c371-6db7-4204-9dfd-8bc86fb587a0" alt="Review results in the web app" width="100%" />
+      <br /><sub>Review results in the webapp</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="https://github.com/user-attachments/assets/2832ee83-07cb-4401-85bc-f0ec909071e6" alt="Automated review comment on a pull request" width="100%" />
+      <br /><sub>The tool reviewing a pull request on this repo</sub>
+    </td>
+  </tr>
+</table>
 
 ## Example
 
@@ -21,7 +32,11 @@ public string GetUser(string name) {
 
 and it flags the SQL injection as High severity with parameterized queries as the fix, plus the missing null check on `name` and the `SELECT *` as lower-severity issues. It handles other languages too - I tested it with JavaScript and it correctly picked up on `var` vs `const`/`let` instead of giving C# advice.
 
-There's also a filter to only ask for security issues (or only bugs, or only style), and if the code is actually fine it just says no issues found rather than making something up. That last part mattered to me because LLMs love to invent problems when you ask them to find some.
+There's also a filter to only show security issues (or only bugs, or only style), and if the code is actually fine it just says no issues found rather than making something up. That last part mattered to me because LLMs love to invent problems when you ask them to find some.
+
+## It reviews its own pull requests
+
+This repo has a GitHub Action that runs on every pull request: it takes the PR's diff, sends it to the deployed API, and posts the findings back as a comment on the PR - severity, category, line, issue, and suggested fix in a table. The workflow retries while the free-tier API wakes up, and it trims huge diffs before sending to keep token costs down. See `.github/workflows/pr-review.yml`.
 
 ## How it works
 
@@ -66,12 +81,11 @@ Models/              request/response records (the shape the model has to return
 Services/            CodeReviewService - builds the prompt, calls the model, parses the output
 Program.cs           the API endpoint and CORS setup
 frontend/            the React app
-.github/workflows/   deploy pipeline for the frontend
+.github/workflows/   frontend deploy pipeline + the PR review action
 ```
 
 ## Still to do
 
-- A GitHub Action that reviews pull requests on this repo and posts the findings as PR comments
 - Some unit tests around the JSON parsing
 - Retry once when the model returns something unparseable
 - Streaming the response into the UI
