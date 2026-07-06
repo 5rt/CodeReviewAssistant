@@ -10,7 +10,7 @@ Heads up: the backend runs on Azure's free tier, so if nobody has used it for a 
   <tr>
     <td align="center" width="50%">
       <img src="https://github.com/user-attachments/assets/df50c371-6db7-4204-9dfd-8bc86fb587a0" alt="Review results in the web app" width="100%" />
-      <br /><sub>Review results in the webapp</sub>
+      <br /><sub>Review results in the app</sub>
     </td>
     <td align="center" width="50%">
       <img src="https://github.com/user-attachments/assets/2832ee83-07cb-4401-85bc-f0ec909071e6" alt="Automated review comment on a pull request" width="100%" />
@@ -34,15 +34,21 @@ and it flags the SQL injection as High severity with parameterized queries as th
 
 There's also a filter to only show security issues (or only bugs, or only style), and if the code is actually fine it just says no issues found rather than making something up. That last part mattered to me because LLMs love to invent problems when you ask them to find some.
 
-## It reviews its own pull requests
+## It reviews its own pull requests - and blocks bad ones
 
-This repo has a GitHub Action that runs on every pull request: it takes the PR's diff, sends it to the deployed API, and posts the findings back as a comment on the PR - severity, category, line, issue, and suggested fix in a table. The workflow retries while the free-tier API wakes up, and it trims huge diffs before sending to keep token costs down. See `.github/workflows/pr-review.yml`.
+This repo has a GitHub Action that runs on every pull request: it takes the PR's diff, sends it to the deployed API, and posts the findings back as a comment. If it finds anything High-severity, the check fails - and because `main` has a branch rule requiring that check to pass, the PR literally can't be merged. So the repo won't let vulnerable code in. I tested this by opening a PR with a SQL-injection sample and watching the merge button lock.
+
+There's also a second action (Backend CI) that builds the API and runs the unit tests on every PR, so the same PR gets checked by a compiler, a test suite, and the AI reviewer.
 
 ## How it works
 
 React + TypeScript frontend (hosted on Azure Static Web Apps) → ASP.NET Core API (Azure App Service) → Azure OpenAI (gpt-5-mini).
 
-The interesting part is getting reliable output from the model. The API sends a system prompt telling the model to respond with nothing but JSON in a specific shape (severity and category limited to fixed values, line number, issue, fix). On the C# side that gets deserialized into records, so the rest of the code works with typed data instead of raw model text. The model still occasionally wraps its answer in markdown fences, so before parsing I just grab everything between the first `{` and the last `}`.
+The interesting part is getting reliable output from the model. The API sends a system prompt telling the model to respond with nothing but JSON in a specific shape (severity and category limited to fixed values, line number, issue, fix). On the C# side that gets deserialized into records, so the rest of the code works with typed data instead of raw model text. The model still occasionally wraps its answer in markdown fences, so before parsing I just grab everything between the first `{` and the last `}`. And if a reply is genuinely broken, the service hands the model its own bad output and asks it to fix it, once.
+
+The parsing lives in its own class (`ReviewParser`) separate from the Azure client, which is what makes it unit-testable - there are five xUnit tests covering the happy path, the markdown-fence case, garbage input, case-insensitive matching, and clean code.
+
+Since the API is public and spends my Azure credit, it's rate-limited (5 requests a minute, returns 429 after that) and rejects anything over 100KB before it ever calls the model.
 
 The other thing I put effort into is auth. There are no API keys anywhere - not in the code, not in the repo, not in the CI pipeline. Locally the app authenticates as me through `az login`; in production the App Service has a managed identity with one role (Cognitive Services OpenAI User) on the OpenAI resource. Same code path both ways via `DefaultAzureCredential`.
 
@@ -74,22 +80,35 @@ npm run dev
 
 Opens on http://localhost:5173 and talks to localhost:5139 by default.
 
+Run the tests:
+
+```bash
+dotnet test tests/CodeReviewAssistant.Tests
+```
+
 ## Repo layout
 
 ```
 Models/              request/response records (the shape the model has to return)
-Services/            CodeReviewService - builds the prompt, calls the model, parses the output
-Program.cs           the API endpoint and CORS setup
+Services/            CodeReviewService (calls the model) + ReviewParser (parses the output)
+Program.cs           the API endpoint, CORS, and rate limiting
 frontend/            the React app
-.github/workflows/   frontend deploy pipeline + the PR review action
+tests/               xUnit tests for the parser
+.github/workflows/   frontend deploy, backend CI, and the PR review + quality gate
 ```
+
+## A design note
+
+The quality gate blocks on any High-severity finding, which is right for a demo. On a real team you'd worry about false positives blocking legit work, so you'd probably gate only on High *security* findings, or make it a warning with a manual override. Same with the rate limiter - it's global right now (fine when the thing being protected is my own credit), but you'd partition it per-user for a multi-tenant app.
 
 ## Still to do
 
-- Some unit tests around the JSON parsing
-- Retry once when the model returns something unparseable
+- Inline PR comments attached to specific lines, instead of one summary comment
+- Structured Outputs (schema-enforced JSON) instead of prompting for the shape
 - Streaming the response into the UI
 
 ---
 
 Tushar Das - [github.com/5rt](https://github.com/5rt)
+
+Longer write-up with the full build and everything that went wrong: [docs/PROJECT_REPORT.md](docs/PROJECT_REPORT.md)
