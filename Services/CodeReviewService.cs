@@ -42,6 +42,22 @@ public class CodeReviewService
         ]);
 
         var raw = completion.Content[0].Text;
-        return ReviewParser.Parse(raw);
+        var issues = ReviewParser.Parse(raw);
+
+        // Self-correction: if parsing failed on a non-trivial reply, ask the model to fix its own output once
+        if (issues.Count == 0 && !raw.Contains("\"issues\""))
+        {
+            ChatCompletion retry = await _chatClient.CompleteChatAsync(
+            [
+                new SystemChatMessage(systemPrompt),
+                new UserChatMessage(diff),
+                new AssistantChatMessage(raw),
+                new UserChatMessage("Your previous reply was not valid JSON in the required shape. Respond again with ONLY the JSON object, nothing else.")
+            ]);
+            issues = ReviewParser.Parse(retry.Content[0].Text);
+        }
+
+        return issues;
+
     }
 }

@@ -23,7 +23,11 @@ const EXAMPLE = `public string GetUser(string name) {
 const API = import.meta.env.VITE_API_URL ?? "http://localhost:5139";
 
 const sevClass = (s: string) =>
-  s.toLowerCase() === "high" ? "high" : s.toLowerCase() === "medium" ? "med" : "low";
+  s.toLowerCase() === "high"
+    ? "high"
+    : s.toLowerCase() === "medium"
+      ? "med"
+      : "low";
 
 export default function App() {
   const [code, setCode] = useState("");
@@ -42,10 +46,21 @@ export default function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ diff: code, focus: "everything" }),
       });
-      if (!res.ok) throw new Error(`The review service returned ${res.status}. Check the API is running.`);
+      if (res.status === 429)
+        throw new Error(
+          "Rate limit reached - the API allows 5 reviews per minute. Wait a moment and try again.",
+        );
+      if (!res.ok)
+        throw new Error(
+          `The review service returned ${res.status}. Check the API is running.`,
+        );
       setIssues(await res.json());
     } catch (e) {
-      setError(e instanceof Error ? e.message : "The review couldn't be completed. Try again.");
+      setError(
+        e instanceof Error
+          ? e.message
+          : "The review couldn't be completed. Try again.",
+      );
     } finally {
       setLoading(false);
     }
@@ -56,8 +71,8 @@ export default function App() {
     issues === null
       ? null
       : focus === "everything"
-      ? issues
-      : issues.filter((i) => i.category.toLowerCase() === focus);
+        ? issues
+        : issues.filter((i) => i.category.toLowerCase() === focus);
 
   const count = (sev: string) =>
     visible?.filter((i) => i.severity.toLowerCase() === sev).length ?? 0;
@@ -115,7 +130,11 @@ export default function App() {
             </button>
           ))}
         </div>
-        <button className="review-btn" onClick={review} disabled={loading || !code.trim()}>
+        <button
+          className="review-btn"
+          onClick={review}
+          disabled={loading || !code.trim()}
+        >
           {loading ? "Reviewing…" : "Review code"}
         </button>
       </div>
@@ -132,16 +151,24 @@ export default function App() {
       {visible && visible.length > 0 && (
         <>
           <div className="summary">
-            <span className="pill high"><b>{count("high")}</b> high</span>
-            <span className="pill med"><b>{count("medium")}</b> medium</span>
-            <span className="pill low"><b>{count("low")}</b> low</span>
+            <span className="pill high">
+              <b>{count("high")}</b> high
+            </span>
+            <span className="pill med">
+              <b>{count("medium")}</b> medium
+            </span>
+            <span className="pill low">
+              <b>{count("low")}</b> low
+            </span>
           </div>
           {visible.map((i, idx) => (
             <article className={`card ${sevClass(i.severity)}`} key={idx}>
               <div className="card-top">
                 <span className="sev">{i.severity}</span>
                 <span className="cat">{i.category}</span>
-                {i.line != null && <span className="line-chip">line {i.line}</span>}
+                {i.line != null && (
+                  <span className="line-chip">line {i.line}</span>
+                )}
               </div>
               <p className="issue">{i.issue}</p>
               <div className="fix">
@@ -153,16 +180,23 @@ export default function App() {
       )}
 
       {visible && visible.length === 0 && issues && issues.length > 0 && (
-        <div className="empty">No {FOCUSES.find((f) => f.key === focus)?.label.toLowerCase()} found in this review.</div>
+        <div className="empty">
+          No {FOCUSES.find((f) => f.key === focus)?.label.toLowerCase()} found
+          in this review.
+        </div>
       )}
 
       {issues && issues.length === 0 && (
-        <div className="empty">No issues found — this snippet looks clean. 🎉</div>
+        <div className="empty">
+          No issues found — this snippet looks clean. 🎉
+        </div>
       )}
 
       <footer className="footer">
         <span>Built by Tushar Das</span>
-        <span>React · TypeScript · ASP.NET Core · Azure OpenAI · GitHub Actions</span>
+        <span>
+          React · TypeScript · ASP.NET Core · Azure OpenAI · GitHub Actions
+        </span>
       </footer>
     </div>
   );
