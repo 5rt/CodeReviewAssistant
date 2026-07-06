@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Azure.AI.OpenAI;
 using Azure.Identity;
 using OpenAI.Chat;
@@ -43,16 +42,6 @@ public class CodeReviewService
         ]);
 
         var raw = completion.Content[0].Text;
-
-        // Defensive parsing — grab the JSON even if the model adds stray text/fences
-        var start = raw.IndexOf('{');
-        var end = raw.LastIndexOf('}');
-        if (start < 0 || end <= start) return new();
-        var json = raw.Substring(start, end - start + 1);
-
-        var result = JsonSerializer.Deserialize<ReviewResult>(json,
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-        return result?.Issues ?? new();
+        return ReviewParser.Parse(raw);
     }
 }
